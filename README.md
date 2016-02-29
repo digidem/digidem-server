@@ -36,6 +36,8 @@ export DO_API_KEY=our_digitalocean_api_key
 
 This will create a new 1gb 'droplet' (server) with dokku installed in `nyc3` region, and configure it with all the tweaks we need. You will need to visit https://cloud.digitalocean.com/ to find out the IP of the newly created droplet for the next step.
 
+To see other available options type `./provision --help`
+
 ## Setup
 
 We ideally want a DNS name to point at the new server. We manage our DNS with [CloudFlare](https://www.cloudflare.com). Visit the DNS management page and add an `A` record for the new server IP address.
