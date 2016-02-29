@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+
+var dotenv = require('dotenv')
+var fs = require('fs')
+var fingerprint = require('ssh-fingerprint')
+var DO = require('do-wrapper')
+var randomWord = require('random-word')
+
+var argv = require('yargs')
+    .usage('Usage: $0 [options]')
+    .example('$0 -k ~/.ssh/id_rsa.pub -s 512mb', 'Deploy a 512mb droplet on Digital Ocean and add the public key id_rsa.pub')
+    .alias('k', 'key')
+    .default('k', process.env.HOME + '/.ssh/id_rsa.pub')
+    .describe('k', 'Public key file to add to the server')
+    .alias('n', 'name')
+    .default('n', 'digidem-' + randomWord())
+    .describe('n', 'The human-readable string you wish to use when displaying the server name. The name set during creation will determine the hostname for the server in its internal configuration. Defaults to a random word')
+    .alias('r', 'region')
+    .default('r', 'nyc3')
+    .choices('r', ['nyc1', 'ams1', 'sfo1', 'nyc2', 'ams2', 'sgp1', 'lon1', 'nyc3', 'ams3', 'fra1', 'tor1'])
+    .describe('r', 'The unique slug identifier for the region that you wish to deploy in.')
+    .alias('s', 'size')
+    .default('s', '1gb')
+    .choices('s', ['512mb', '1gb', '2gb', '4gb', '8gb'])
+    .describe('s', 'The unique slug identifier for the size that you wish to select for this Droplet.')
+    .alias('h', 'help')
+    .help()
+    .argv
+
+dotenv.load()
+
+if (!process.env.DO_API_KEY) {
+  throw new Error('You need to set the environment variable DO_API_KEY to your Digital Ocean API token')
+}
+
+var api = new DO(process.env.DO_API_KEY)
+
+var publickey = fs.readFileSync(process.env.HOME + '/.ssh/id_rsa.pub', 'utf-8')
+
+var keyFingerprint = fingerprint(publickey)
+
+var cloudInit = fs.readFileSync(__dirname + '/cloud-init.sh', 'utf-8')
+
+var config = {
+  name: argv.name,
+  region: argv.region,
+  size: argv.size,
+  image: 'dokku',
+  ssh_keys: [
+    keyFingerprint
+  ],
+  backups: false,
+  ipv6: false,
+  user_data: cloudInit
+}
+
+api.accountGetKeyByFingerprint(keyFingerprint, addKeyToAccount)
+
+function addKeyToAccount (err) {
+  if (!err) return createDroplet()
+  api.accountAddKey({
+    name: process.env.USER,
+    public_key: publickey
+  }, createDroplet)
+}
+
+function createDroplet (err) {
+  if (err) return console.error(err)
+  api.dropletsCreate(config, function (err, res, body) {
+    if (err) console.error(err)
+    console.log("New server created '%s'. Visit https://cloud.digitalocean.com/ to find out the IP address", body.droplet.name)
+    console.log(body)
+  })
+}

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+SERVER="$1"
+echo $SERVER
+if [ $SERVER ]; then
+  echo 'Running ./cloud-init.sh on $SERVER'
+  ssh root@$SERVER 'bash -s' < ./cloud-init.sh
+else
+  echo 'missing server IP / hostname'
+fi
