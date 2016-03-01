@@ -74,6 +74,9 @@ iptables -A INPUT -j DROP
 # Only allow local connections to docker
 echo 'DOCKER_OPTS="$DOCKER_OPTS --ip=127.0.0.1"' >> /etc/default/docker
 
+# Install letsencrypt plugin for creating and managing SSL certs
+dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
+
 # nginx optimizations
 # set max worker connections based on ulimit
 sed -i "s/worker_connections .*/worker_connections $(ulimit -n);/" /etc/nginx/nginx.conf
